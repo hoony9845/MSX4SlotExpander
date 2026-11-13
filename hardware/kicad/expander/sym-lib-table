@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "MSXExp")(type "KiCad")(uri "${KIPRJMOD}/MSXExp.kicad_sym")(options "")(descr "MSX expander parts"))
+)

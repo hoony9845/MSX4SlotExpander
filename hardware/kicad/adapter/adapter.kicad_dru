@@ -1,0 +1,5 @@
+(version 1)
+# The gold fingers run right up to the bottom board edge (bevelled at the fab).
+(rule "gold_fingers_to_edge"
+  (condition "A.memberOfFootprint('J1')")
+  (constraint edge_clearance (min 0)))

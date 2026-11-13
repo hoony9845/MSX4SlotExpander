@@ -1,0 +1,4 @@
+(version 1)
+# A single thermal spoke is acceptable (hand-soldered parts).
+(rule "thermal_spokes"
+  (constraint min_resolved_spokes 1))
