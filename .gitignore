@@ -6,3 +6,6 @@ __pycache__/
 ~*.lck
 fp-info-cache
 *.kicad_prl
+
+# CPLD build output
+CPLD_v2/build/
