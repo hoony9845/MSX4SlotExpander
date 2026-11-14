@@ -63,7 +63,7 @@ EDGE_PIN1_X = 105.682        # x of pins 1/2; pins 49/50 at 105.682 - 24 * 2.54
 FINGER_Y = 78.808            # finger centre line
 FINGER_W, FINGER_L = 1.5, 8.0
 BOARD_BOTTOM = FINGER_Y + FINGER_L / 2
-BOARD_TOP = 18.038
+BOARD_TOP = 19.038             # 1mm below the msx_v9990 cartridge top edge (18.038)
 BOARD_LEFT, BOARD_RIGHT = 19.602, 120.692
 TONGUE_TOP = 70.918
 TONGUE_LEFT, TONGUE_RIGHT = 42.812, 107.597
@@ -92,7 +92,8 @@ TONGUE = [(TONGUE_LEFT, TONGUE_TOP), (TONGUE_RIGHT, TONGUE_TOP),
 # ---------------------------------------------------------------------------
 CENTER_X = EDGE_PIN1_X - 12 * 2.54   # 75.202, pins 25/26
 J2_BODY = 13.28                      # right-angle header: odd pin row -> mating face
-J2_OVERHANG = 4.0                    # mating face beyond the top board edge (mm)
+J2_ROW_TO_EDGE = 1.8                 # upper (even) pad row centre -> top board edge
+J2_OVERHANG = round(J2_BODY - 2.54 - J2_ROW_TO_EDGE, 3)   # mating face beyond the top edge
 J2_PIN1_X = (BOARD_LEFT + BOARD_RIGHT) / 2 + 12 * 2.54        # header centred on the board width
 J2_ORIGIN = (J2_PIN1_X, BOARD_TOP + J2_BODY - J2_OVERHANG)    # footprint origin = IDC pin 1 (lower row)
 SQUEEZE = 2.0                        # pitch between the shell holes
@@ -314,13 +315,6 @@ def route_pin(board, n, net):
             add_track(board, a, b, net, w, layer)
         if n == 47:                # tie the two +5V pins (IDC 45, 47) along the lower row
             add_track(board, (x, near_y), (x + 2.54, near_y), net, W_PWR_NARROW, layer)
-        if net.GetNetname() == "/GND":
-            # the lower row is caged in by the signal tracks: reach the pour
-            # under the header body diagonally between the four pads, then up
-            # between the upper-row pads (B.Cu is free there)
-            mid = (x - 1.27, near_y - 1.27)
-            add_track(board, (x, near_y), mid, net, W_PWR_NARROW, layer)
-            add_track(board, mid, (x - 1.27, far_y - 2.2), net, W_PWR_NARROW, layer)
     else:
         t = x + 1.27               # between the lower-row pads
         path = [(xf, Y_FINGER_START), (xf, Y_FINGER_EXIT), (c, Y_LOW), (c, Y_HIGH), (t, Y_HEADER)]
@@ -398,14 +392,29 @@ def main():
     for n in range(1, 51):
         route_pin(board, n, pad_net[n])
 
-    # GND stitching vias in the empty areas (left, right, top strip)
+    # J2 sits right at the top edge, so there is no pour strip above it. Tie the
+    # GND pours (left of / right of the header) to the lower-row GND pads with a
+    # B.Cu bus between the two pad rows (B.Cu is free there: the odd tracks end
+    # at the lower row, the even ones run on F.Cu), ending in a via on each side.
     gnd = board.FindNet("/GND")
     assert gnd is not None
+    bus_y = J2_ORIGIN[1] - 1.27
+    bus_l, bus_r = J2_PIN1_X - 24 * 2.54 - 3.0, J2_PIN1_X + 4.5
+    add_track(board, (bus_l, bus_y), (bus_r, bus_y), gnd, W_PWR_NARROW, pcbnew.B_Cu)
+    for n in range(1, 51, 2):
+        if pad_net[n].GetNetname() == "/GND":
+            x = J2_PIN1_X - 2.54 * ((n - 1) // 2)
+            add_track(board, (x, J2_ORIGIN[1]), (x - 1.27, bus_y), gnd, W_PWR_NARROW, pcbnew.B_Cu)
+    for bx in (bus_l, bus_r):
+        add_via(board, (bx, bus_y), gnd)
+
+    # GND stitching vias in the empty areas (left, right, top strip)
     spots = [(x, y) for x in (20.8, 37.0) for y in range(22, 58, 4)]       # beside the left text block
     spots += [(x, y) for x in (25.0, 29.0, 33.0) for y in (22.0, 26.0, 30.0, 34.0, 57.0)]
     spots += [(x, y) for x in (113.5, 117.5) for y in range(22, 70, 4)]
     for s in sorted(set(spots)):
-        add_via(board, s, gnd)
+        if all(math.hypot(s[0] - bx, s[1] - bus_y) > 1.0 for bx in (bus_l, bus_r)):   # clear of the bus vias
+            add_via(board, s, gnd)
 
     # GND pours on both layers
     bb = board.GetBoardEdgesBoundingBox()
