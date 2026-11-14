@@ -442,7 +442,7 @@ def main():
                                            ("ADAPTER", 1.3, True), ("for 4Slot", 0.9, False),
                                            ("Expander v2", 0.9, False), ("Daewoo rear", 0.9, False),
                                            ("slot pinout", 0.9, False), ("J2 on bottom", 0.9, False),
-                                           ("rev 1.1", 0.9, False))):
+                                           ("rev 1.2", 0.9, False))):
         add_text(board, txt, tx, 38.0 + i * 2.0 + (0.6 if i > 2 else 0), size, bold=bold)
     ny, fy = J2_ORIGIN[1], J2_ORIGIN[1] - 2.54
     for txt, x, y in (("1", J2_PIN1_X, ny), ("2", J2_PIN1_X, fy),
